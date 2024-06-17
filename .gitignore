@@ -1,0 +1,7 @@
+# Ignore the virtual environment directory
+venv/
+
+# Other files and directories to ignore can be added below
+.DS_Store
+*.pyc
+__pycache__/
