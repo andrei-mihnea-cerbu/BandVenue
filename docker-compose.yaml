@@ -10,5 +10,13 @@ services:
     volumes:
       - ./api:/app
 
-volumes:
-  postgres_data:
+  # Uncomment the following lines to include the UI service
+  # ui:
+  #   build:
+  #     context: ./ui
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - ./ui:/app
+

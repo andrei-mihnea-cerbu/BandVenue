@@ -5,9 +5,9 @@ from sqlalchemy.sql import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
 from app.database import engine, SessionLocal
-from app.models import Base
+from app.database import Base
 from app.routers import artists, events, auth
-from app.utils.email import send_startup_email
+from app.utils.email_service import email_service
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +94,7 @@ def check_database_connection():
 def startup_event():
     check_database_connection()
     try:
-        send_startup_email()
+        email_service.send_startup_email()
         logger.info("Startup email sent successfully.")
     except Exception as e:
         logger.error("Failed to send startup email: %s", str(e))
