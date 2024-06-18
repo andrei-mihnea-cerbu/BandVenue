@@ -5,6 +5,7 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
+
 class Settings(BaseSettings):
     HOST: str = os.getenv("HOST")
     PORT: int = int(os.getenv("PORT"))

@@ -18,7 +18,7 @@ fileConfig(config.config_file_name)
 # add your model's MetaData object here
 # for 'autogenerate' support
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from app.models import Base  # adjust the import as needed
+from app.database import Base  # adjust the import as needed
 
 target_metadata = Base.metadata
 

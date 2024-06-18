@@ -1,6 +1,11 @@
 from pydantic import BaseModel, EmailStr
-
 from app.utils.enums import UserRole
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
 
 
 class UserBase(BaseModel):
@@ -30,3 +35,9 @@ class AuthRequest(BaseModel):
 class PasswordResetRequest(BaseModel):
     email: EmailStr
     new_password: str
+
+
+class UserUpdateRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str

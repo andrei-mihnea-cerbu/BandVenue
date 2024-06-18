@@ -23,14 +23,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         token_data = {"id": user_id}
     except JWTError:
         raise credentials_exception
-    user = db.query(UserModel).filter(UserModel.user_id == token_data["id"]).first()
+    user = db.query(UserModel).filter(token_data["id"] == UserModel.user_id).first()
     if user is None:
         raise credentials_exception
     return user
 
 
 def get_current_active_user(current_user: UserModel = Depends(get_current_user)):
-    if current_user.disabled:
+    if current_user.suspended_account:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 

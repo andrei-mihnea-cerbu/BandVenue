@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 from sqlalchemy import String, Integer, Boolean, Enum
-from app.utils.security_service import get_password_hash
+from app.utils.security_util import get_password_hash
 
 
 # revision identifiers, used by Alembic.

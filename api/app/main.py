@@ -7,7 +7,7 @@ from app.config import settings
 from app.database import engine, SessionLocal
 from app.database import Base
 from app.routers import artists, events, auth
-from app.utils.email_service import email_service
+from app.utils.email_util import email_service
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +28,9 @@ app = FastAPI(
     - `POST /auth/login`: Login using email and password to receive an access token and a refresh token.
     - `POST /auth/refresh`: Refresh the JWT token using the refresh token.
     - `POST /auth/reset_password`: Reset the user's password by providing the email and new password.
+    - `DELETE /auth/delete/{user_id}`: Permanently deletes a user from the database.
+    - `PUT /auth/disable/{user_id}`: Enables or disables a user account based on the provided boolean parameter.
+    - `PUT /auth/modify/{user_id}`: Updates user details such as username and email.
 
     ### Authentication Workflow
 
