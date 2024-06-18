@@ -6,10 +6,12 @@ from starlette.responses import Response
 
 from app.schemas import Artist, ArtistCreate
 from app.database import get_db
-from app.services.artist_service import create_artist, get_artists, get_artist, update_artist, delete_artist
-from app.dependencies import get_current_active_user
+from app.schemas.artist import ArtistBase
+from app.services import artist_service_class
+from app.dependencies import authenticate_user
 
 router = APIRouter()
+
 
 @router.post("/", response_model=Artist,
              status_code=status.HTTP_201_CREATED,
@@ -46,12 +48,12 @@ router = APIRouter()
                      }
                  }
              },
-             dependencies=[Depends(get_current_active_user)])
-def create_artist_handler(artist: ArtistCreate, db: Session = Depends(get_db)):
+             dependencies=[Depends(authenticate_user)])
+def create_artist_handler(artist: ArtistCreate):
     """
     Creates a new artist record. Accessible to authenticated users.
     """
-    return create_artist(artist, db)
+    return artist_service_class.create_artist(artist)
 
 
 @router.get("/",
@@ -84,13 +86,12 @@ def create_artist_handler(artist: ArtistCreate, db: Session = Depends(get_db)):
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def read_artists_handler(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+            })
+def read_artists_handler(skip: int = 0, limit: int = 10):
     """
     Retrieves a list of artists. Accessible to any authenticated user.
     """
-    return get_artists(skip, limit, db)
+    return artist_service_class.get_artists(skip, limit)
 
 
 @router.get("/{artist_id}",
@@ -127,13 +128,12 @@ def read_artists_handler(skip: int = 0, limit: int = 10, db: Session = Depends(g
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def read_artist_handler(artist_id: int, db: Session = Depends(get_db)):
+            })
+def read_artist_handler(artist_id: int):
     """
     Retrieves specific artist details. Accessible to any authenticated user.
     """
-    artist = get_artist(artist_id, db)
+    artist = artist_service_class.get_artist(artist_id)
     if artist is None:
         raise HTTPException(status_code=404, detail="Artist not found")
     return artist
@@ -166,13 +166,12 @@ def read_artist_handler(artist_id: int, db: Session = Depends(get_db)):
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def update_artist_handler(artist_id: int, artist: ArtistCreate, db: Session = Depends(get_db)):
+            })
+def update_artist_handler(artist_id: int, artist: ArtistBase):
     """
     Updates an artist's details. Only accessible to authenticated users.
     """
-    updated_artist = update_artist(artist_id, artist.name, db)
+    updated_artist = artist_service_class.update_artist(artist_id, artist.name)
     if updated_artist is None:
         raise HTTPException(status_code=404, detail="Artist not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -195,13 +194,12 @@ def update_artist_handler(artist_id: int, artist: ArtistCreate, db: Session = De
                            }
                        }
                    }
-               },
-               dependencies=[Depends(get_current_active_user)])
-def delete_artist_handler(artist_id: int, db: Session = Depends(get_db)):
+               })
+def delete_artist_handler(artist_id: int):
     """
     Deletes an artist record. Only accessible to authenticated users.
     """
-    deleted_artist = delete_artist(artist_id, db)
+    deleted_artist = artist_service_class.delete_artist(artist_id)
     if deleted_artist is None:
         raise HTTPException(status_code=404, detail="Artist not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

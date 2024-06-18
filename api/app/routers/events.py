@@ -6,8 +6,7 @@ from starlette.responses import Response
 
 from app.schemas import Event, EventCreate
 from app.database import get_db
-from app.services.event_service import create_event, get_events, get_event, update_event, delete_event
-from app.dependencies import get_current_active_user
+from app.services import event_service_class
 
 router = APIRouter()
 
@@ -58,13 +57,12 @@ router = APIRouter()
                          }
                      }
                  }
-             },
-             dependencies=[Depends(get_current_active_user)])
-def create_event_handler(event: EventCreate, db: Session = Depends(get_db)):
+             })
+def create_event_handler(event: EventCreate):
     """
     Creates a new event record. Accessible to authenticated users.
     """
-    return create_event(event, db)
+    return event_service_class.create_event(event)
 
 
 @router.get("/",
@@ -122,13 +120,12 @@ def create_event_handler(event: EventCreate, db: Session = Depends(get_db)):
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def read_events_handler(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+            })
+def read_events_handler(skip: int = 0, limit: int = 10):
     """
     Retrieves a list of events. Accessible to any authenticated user.
     """
-    return get_events(skip, limit, db)
+    return event_service_class.get_events(skip, limit)
 
 
 @router.get("/{event_id}",
@@ -176,13 +173,12 @@ def read_events_handler(skip: int = 0, limit: int = 10, db: Session = Depends(ge
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def read_event_handler(event_id: int, db: Session = Depends(get_db)):
+            })
+def read_event_handler(event_id: int):
     """
     Retrieves specific event details. Accessible to any authenticated user.
     """
-    event = get_event(event_id, db)
+    event = event_service_class.get_event(event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return event
@@ -215,13 +211,12 @@ def read_event_handler(event_id: int, db: Session = Depends(get_db)):
                         }
                     }
                 }
-            },
-            dependencies=[Depends(get_current_active_user)])
-def update_event_handler(event_id: int, event: EventCreate, db: Session = Depends(get_db)):
+            })
+def update_event_handler(event_id: int, event: EventCreate):
     """
     Updates an event's details. Only accessible to authenticated users.
     """
-    updated_event = update_event(event_id, event, db)
+    updated_event = event_service_class.update_event(event_id, event)
     if updated_event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -244,13 +239,12 @@ def update_event_handler(event_id: int, event: EventCreate, db: Session = Depend
                            }
                        }
                    }
-               },
-               dependencies=[Depends(get_current_active_user)])
-def delete_event_handler(event_id: int, db: Session = Depends(get_db)):
+               })
+def delete_event_handler(event_id: int):
     """
     Deletes an event record. Only accessible to authenticated users.
     """
-    deleted_event = delete_event(event_id, db)
+    deleted_event = event_service_class.delete_event(event_id)
     if deleted_event is None:
         raise HTTPException(status_code=404, detail="Event not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
