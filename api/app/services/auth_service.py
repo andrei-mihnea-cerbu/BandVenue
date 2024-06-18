@@ -23,14 +23,7 @@ def register_new_user(request, user: UserCreate, db: Session):
     user_repo.create(db, new_user)
 
     email_service.send_registration_email(request, user.username, user.email, user.password)
-
-    # Create access and refresh tokens
-    access_token = jwt_service.create_access_token(
-        {"id": new_user.user_id, "username": new_user.username, "email": new_user.email})
-    refresh_token = jwt_service.create_refresh_token(
-        {"id": new_user.user_id, "username": new_user.username, "email": new_user.email})
-
-    return {"user": new_user, "access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {"user": new_user}
 
 
 def login_user(auth_request, db: Session):
@@ -76,7 +69,7 @@ def reset_user_password(email: str, new_password: str, db: Session):
     user.password = hashed_password
     db.commit()
     email_service.send_reset_password_email(user.email)
-    return {"msg": "Password reset successfully"}
+    return {"detail": "Password reset successfully"}
 
 
 def delete_user(user_id: int, db: Session):

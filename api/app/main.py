@@ -1,11 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security.api_key import APIKeyHeader
+from fastapi.openapi.utils import get_openapi
 from sqlalchemy.sql import text
 from sqlalchemy.exc import SQLAlchemyError
+from starlette import status
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
 from app.config import settings
-from app.database import engine, SessionLocal
-from app.database import Base
+from app.database import engine, SessionLocal, Base
+from app.dependencies import get_api_key
 from app.routers import artists, events, auth
 from app.utils.email_util import email_service
 import logging
@@ -81,21 +86,13 @@ app = FastAPI(
 )
 
 
-def check_database_connection():
-    try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        logger.info("Database connection verified successfully.")
-    except SQLAlchemyError as e:
-        logger.error("Database connection failed: %s", str(e))
-        raise HTTPException(status_code=500, detail="Database connection failed: " + str(e))
-    finally:
-        db.close()
-
-
 @app.on_event("startup")
 def startup_event():
+    # Database connection check on startup
     check_database_connection()
+    if settings.MODE == "Development":
+        app.openapi = custom_openapi
+    # Send startup email notification
     try:
         email_service.send_startup_email()
         logger.info("Startup email sent successfully.")
@@ -104,62 +101,79 @@ def startup_event():
         raise HTTPException(status_code=500, detail="SMTP connection failed: " + str(e))
 
 
-if settings.MODE == "Development":
-    from fastapi.openapi.utils import get_openapi
+def check_database_connection():
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        logger.info("Database connection verified successfully.")
+    except SQLAlchemyError as e:
+        logger.error("Database connection failed: %s", str(e))
+        raise HTTPException(status_code=500, detail="Database connection failed: " + str(e))
 
 
-    def custom_openapi():
-        if app.openapi_schema:
-            return app.openapi_schema
-        openapi_schema = get_openapi(
-            title="Band Venue API",
-            version="1.0.0",
-            description=app.description,
-            routes=app.routes,
-        )
-        app.openapi_schema = openapi_schema
+def custom_openapi():
+    if app.openapi_schema:
         return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Band Venue API",
+        version="1.0.0",
+        description=app.description,
+        routes=app.routes
+    )
+    if "components" not in openapi_schema:
+        openapi_schema["components"] = {}
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        },
+        "APIKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-KEY"
+        }
+    }
+    openapi_schema["security"] = [
+        {"BearerAuth": []},
+        {"APIKeyAuth": []}
+    ]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
 
-    app.openapi = custom_openapi
+# Custom 422 error handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": "Invalid body format"}
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
-API_KEY_NAME = "X-API-KEY"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
+app.include_router(auth.router,
+                   prefix="/auth",
+                   tags=["auth"],
+                   dependencies=[Depends(get_api_key)])
 
-async def get_api_key(api_key_header: str = Depends(api_key_header)):
-    if api_key_header == settings.API_KEY:
-        return api_key_header
-    else:
-        raise HTTPException(status_code=403, detail="Could not validate credentials")
+app.include_router(artists.router,
+                   prefix="/artists",
+                   tags=["artists"],
+                   dependencies=[Depends(get_api_key)])
 
+app.include_router(events.router,
+                   prefix="/events",
+                   tags=["events"],
+                   dependencies=[Depends(get_api_key)])
 
-app.include_router(
-    auth.router,
-    prefix="/auth",
-    tags=["auth"]
-)
-
-app.include_router(
-    artists.router,
-    prefix="/artists",
-    tags=["artists"],
-    dependencies=[Depends(get_api_key)],
-)
-
-app.include_router(
-    events.router,
-    prefix="/events",
-    tags=["events"],
-    dependencies=[Depends(get_api_key)],
-)
 
 Base.metadata.create_all(bind=engine)
